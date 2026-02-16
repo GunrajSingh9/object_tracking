@@ -14,3 +14,4 @@ python-backend/.Python
 python-backend/*.so
 python-backend/*.egg
 python-backend/*.egg-info/
+.vercel
