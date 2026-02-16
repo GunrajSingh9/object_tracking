@@ -1,0 +1,16 @@
+.DS_Store
+node_modules/
+.next/
+dist/
+.env*.local
+.env
+*.log
+python-backend/venv/
+python-backend/__pycache__/
+python-backend/*.pyc
+python-backend/*.pyo
+python-backend/*.pyd
+python-backend/.Python
+python-backend/*.so
+python-backend/*.egg
+python-backend/*.egg-info/

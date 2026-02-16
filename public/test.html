@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffcccc; }
+        .success { background: #ccffcc; }
+        video { width: 320px; height: 240px; border: 2px solid #333; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Object Tracking - WebSocket Test</h1>
+    
+    <div>
+        <button onclick="startCamera()">Start Camera</button>
+        <button onclick="startTracking()">Start Tracking</button>
+        <button onclick="stopTracking()">Stop Tracking</button>
+    </div>
+    
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    
+    <div id="logs"></div>
+    
+    <script>
+        let ws = null;
+        let stream = null;
+        let intervalId = null;
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'log ' + type;
+            div.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+            document.getElementById('logs').appendChild(div);
+            console.log(msg);
+        }
+        
+        async function startCamera() {
+            try {
+                log('Requesting camera access...');
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+                log('✅ Camera started!', 'success');
+            } catch (err) {
+                log('❌ Camera error: ' + err.message, 'error');
+            }
+        }
+        
+        function startTracking() {
+            if (!stream) {
+                log('❌ Please start camera first!', 'error');
+                return;
+            }
+            
+            log('Connecting to WebSocket...');
+            ws = new WebSocket('ws://localhost:8000/ws');
+            
+            ws.onopen = () => {
+                log('✅ WebSocket connected!', 'success');
+                
+                // Start sending frames
+                intervalId = setInterval(() => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        ctx.drawImage(video, 0, 0);
+                        
+                        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+                        ws.send(JSON.stringify({
+                            type: 'frame',
+                            image: frameData,
+                            frame_id: Date.now(),
+                            timestamp: Date.now()
+                        }));
+                    }
+                }, 100); // 10 FPS
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'tracking_update') {
+                    log(`📦 Objects detected: ${data.total_detections}`, 'success');
+                    if (data.objects && data.objects.length > 0) {
+                        data.objects.forEach(obj => {
+                            log(`   - ${obj.class} (ID: ${obj.id}, Confidence: ${(obj.confidence * 100).toFixed(1)}%)`);
+                        });
+                    }
+                }
+            };
+            
+            ws.onerror = (err) => {
+                log('❌ WebSocket error: ' + err.message, 'error');
+            };
+            
+            ws.onclose = () => {
+                log('🔌 WebSocket closed', 'error');
+                if (intervalId) clearInterval(intervalId);
+            };
+        }
+        
+        function stopTracking() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            log('🛑 Tracking stopped');
+        }
+    </script>
+</body>
+</html>
