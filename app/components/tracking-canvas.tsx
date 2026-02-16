@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { TrackedObject } from "@/app/types/tracking";
 
 interface TrackingCanvasProps {
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   trackedObjects: TrackedObject[];
   isLive: boolean;
 }

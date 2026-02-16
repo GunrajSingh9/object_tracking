@@ -8,7 +8,7 @@ import { Camera, CameraOff, RefreshCw } from "lucide-react";
 interface LiveStreamCaptureProps {
   onStreamStart: () => void;
   onStreamStop: () => void;
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
 }
 
 export function LiveStreamCapture({
